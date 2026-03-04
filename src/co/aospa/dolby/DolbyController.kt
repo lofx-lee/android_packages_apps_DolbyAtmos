@@ -116,7 +116,7 @@ internal class DolbyController private constructor(private val context: Context)
         val prefs = context.getSharedPreferences("profile_$profile", Context.MODE_PRIVATE)
         setPreset(prefs.getString(DolbyConstants.PREF_PRESET, getPreset(profile))!!, profile)
         setIeqPreset(
-            prefs.getString(DolbyConstants.PREF_IEQ, getIeqPreset(profile).toString())!!.toInt(),
+            prefs.getString(DolbyConstants.PREF_IEQ, DolbyConstants.IEQ_PRESET_DEFAULT)!!.toInt(),
             profile,
         )
         setHeadphoneVirtEnabled(
@@ -131,7 +131,7 @@ internal class DolbyController private constructor(private val context: Context)
             prefs
                 .getString(
                     DolbyConstants.PREF_STEREO,
-                    getStereoWideningAmount(profile).toString(),
+                    DolbyConstants.STEREO_WIDENING_DEFAULT,
                 )!!
                 .toInt(),
             profile,
@@ -140,7 +140,7 @@ internal class DolbyController private constructor(private val context: Context)
             prefs
                 .getString(
                     DolbyConstants.PREF_DIALOGUE,
-                    getDialogueEnhancerAmount(profile).toString(),
+                    DolbyConstants.DIALOGUE_ENHANCER_DEFAULT,
                 )!!
                 .toInt(),
             profile,
