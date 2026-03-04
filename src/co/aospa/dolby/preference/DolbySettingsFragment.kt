@@ -18,6 +18,8 @@ import androidx.preference.Preference
 import androidx.preference.Preference.OnPreferenceChangeListener
 import androidx.preference.PreferenceCategory
 import androidx.preference.SwitchPreferenceCompat
+import co.aospa.dolby.DolbyConstants.Companion.DIALOGUE_ENHANCER_DEFAULT
+import co.aospa.dolby.DolbyConstants.Companion.IEQ_PRESET_DEFAULT
 import co.aospa.dolby.DolbyConstants.Companion.PREF_BASS
 import co.aospa.dolby.DolbyConstants.Companion.PREF_DIALOGUE
 import co.aospa.dolby.DolbyConstants.Companion.PREF_ENABLE
@@ -29,6 +31,7 @@ import co.aospa.dolby.DolbyConstants.Companion.PREF_RESET
 import co.aospa.dolby.DolbyConstants.Companion.PREF_SPK_VIRTUALIZER
 import co.aospa.dolby.DolbyConstants.Companion.PREF_STEREO
 import co.aospa.dolby.DolbyConstants.Companion.PREF_VOLUME
+import co.aospa.dolby.DolbyConstants.Companion.STEREO_WIDENING_DEFAULT
 import co.aospa.dolby.DolbyConstants.Companion.dlog
 import co.aospa.dolby.DolbyController
 import co.aospa.dolby.R
@@ -240,8 +243,10 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
                 summary = "%s"
                 value = ieqValue.toString()
             } else {
-                summary = unknownRes
-                dlog(TAG, "ieq value $ieqValue unknown")
+                dlog(TAG, "ieq value $ieqValue unknown, resetting to default")
+                dolbyController.setIeqPreset(IEQ_PRESET_DEFAULT.toInt(), currentProfile)
+                summary = "%s"
+                value = IEQ_PRESET_DEFAULT
             }
         }
 
@@ -251,8 +256,13 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
                 summary = "%s"
                 value = deValue
             } else {
-                summary = unknownRes
-                dlog(TAG, "dialogue enhancer value $deValue unknown")
+                dlog(TAG, "dialogue enhancer value $deValue unknown, resetting to default")
+                dolbyController.setDialogueEnhancerAmount(
+                    DIALOGUE_ENHANCER_DEFAULT.toInt(),
+                    currentProfile,
+                )
+                summary = "%s"
+                value = DIALOGUE_ENHANCER_DEFAULT
             }
         }
 
@@ -273,8 +283,13 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
                 summary = "%s"
                 value = swValue
             } else {
-                summary = unknownRes
-                dlog(TAG, "stereo widening value $swValue unknown")
+                dlog(TAG, "stereo widening value $swValue unknown, resetting to default")
+                dolbyController.setStereoWideningAmount(
+                    STEREO_WIDENING_DEFAULT.toInt(),
+                    currentProfile,
+                )
+                summary = "%s"
+                value = STEREO_WIDENING_DEFAULT
             }
         }
 
