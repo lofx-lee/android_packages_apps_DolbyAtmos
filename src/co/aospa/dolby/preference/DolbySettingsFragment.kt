@@ -47,12 +47,12 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
     private val spkVirtPref by lazy {
         findPreference<SwitchPreferenceCompat>(PREF_SPK_VIRTUALIZER)!!
     }
-    private val volumePref by lazy { findPreference<SwitchPreferenceCompat>(PREF_VOLUME)!! }
     private val resetPref by lazy { findPreference<Preference>(PREF_RESET)!! }
     private val settingsCategory by lazy {
         findPreference<PreferenceCategory>("dolby_category_settings")!!
     }
     private var stereoPref: ListPreference? = null
+    private var volumePref: SwitchPreferenceCompat? = null
 
     private val dolbyController by lazy { DolbyController.getInstance(requireContext()) }
     private val audioManager by lazy {
@@ -91,6 +91,12 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
             stereoPref = null
         }
 
+        volumePref = findPreference<SwitchPreferenceCompat>(PREF_VOLUME)!!
+        if (!resources.getBoolean(R.bool.dolby_volume_leveler_supported)) {
+            settingsCategory.removePreference(volumePref!!)
+            volumePref = null
+        }
+
         val profile = dolbyController.profile
         preferenceManager.preferenceDataStore =
             DolbyPreferenceStore(requireContext()).also { it.profile = profile }
@@ -105,7 +111,7 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
         stereoPref?.onPreferenceChangeListener = this
         dialoguePref.onPreferenceChangeListener = this
         bassPref.onPreferenceChangeListener = this
-        volumePref.onPreferenceChangeListener = this
+        volumePref?.onPreferenceChangeListener = this
         ieqPref.onPreferenceChangeListener = this
 
         resetPref.setOnPreferenceClickListener {
@@ -218,7 +224,7 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
         spkVirtPref.setEnabled(enable)
         ieqPref.setEnabled(enable)
         dialoguePref.setEnabled(enable)
-        volumePref.setEnabled(enable)
+        volumePref?.setEnabled(enable)
         resetPref.setEnabled(enable)
         hpVirtPref.setEnabled(enable && !isOnSpeaker)
         stereoPref?.setEnabled(enable && !isOnSpeaker)
@@ -251,7 +257,7 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
         }
 
         spkVirtPref.setChecked(dolbyController.getSpeakerVirtEnabled(currentProfile))
-        volumePref.setChecked(dolbyController.getVolumeLevelerEnabled(currentProfile))
+        volumePref?.setChecked(dolbyController.getVolumeLevelerEnabled(currentProfile))
         bassPref.setChecked(dolbyController.getBassEnhancerEnabled(currentProfile))
 
         // below prefs are not enabled on loudspeaker
