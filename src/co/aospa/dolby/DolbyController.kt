@@ -24,6 +24,8 @@ internal class DolbyController private constructor(private val context: Context)
     private val handler = Handler(context.mainLooper)
     private val stereoWideningSupported =
         context.getResources().getBoolean(R.bool.dolby_stereo_widening_supported)
+    private val volumeLevelerSupported =
+        context.getResources().getBoolean(R.bool.dolby_volume_leveler_supported)
 
     // Restore current profile on every media session
     private val playbackCallback =
@@ -147,10 +149,12 @@ internal class DolbyController private constructor(private val context: Context)
             prefs.getBoolean(DolbyConstants.PREF_BASS, getBassEnhancerEnabled(profile)),
             profile,
         )
-        setVolumeLevelerEnabled(
-            prefs.getBoolean(DolbyConstants.PREF_VOLUME, getVolumeLevelerEnabled(profile)),
-            profile,
-        )
+        if (volumeLevelerSupported) {
+            setVolumeLevelerEnabled(
+                prefs.getBoolean(DolbyConstants.PREF_VOLUME, getVolumeLevelerEnabled(profile)),
+                profile,
+            )
+        }
     }
 
     private fun checkEffect() {
@@ -246,10 +250,12 @@ internal class DolbyController private constructor(private val context: Context)
         dolbyEffect.setDapParameter(DsParam.BASS_ENHANCER_ENABLE, value, profile)
     }
 
-    fun getVolumeLevelerEnabled(profile: Int = this.profile) =
-        dolbyEffect.getDapParameterBool(DsParam.VOLUME_LEVELER_ENABLE, profile).also {
+    fun getVolumeLevelerEnabled(profile: Int = this.profile): Boolean {
+        if (!volumeLevelerSupported) return false
+        return dolbyEffect.getDapParameterBool(DsParam.VOLUME_LEVELER_ENABLE, profile).also {
             dlog(TAG, "getVolumeLevelerEnabled: $it")
         }
+    }
 
     fun setVolumeLevelerEnabled(value: Boolean, profile: Int = this.profile) {
         dlog(TAG, "setVolumeLevelerEnabled: $value")
