@@ -205,10 +205,9 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
         profilePref.setEnabled(dsOn)
         profilePref.apply {
             if (entryValues.contains(currentProfile.toString())) {
+                summary = "%s"
                 value = currentProfile.toString()
-                summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
             } else {
-                summaryProvider = null
                 summary = unknownRes
                 dlog(TAG, "current profile $currentProfile unknown")
             }
@@ -232,10 +231,9 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
         val ieqValue = dolbyController.getIeqPreset(currentProfile)
         ieqPref.apply {
             if (entryValues.contains(ieqValue.toString())) {
+                summary = "%s"
                 value = ieqValue.toString()
-                summaryProvider = Preference.SummaryProvider<DolbyIeqPreference> { it.entry }
             } else {
-                summaryProvider = null
                 summary = unknownRes
                 dlog(TAG, "ieq value $ieqValue unknown")
             }
@@ -244,10 +242,9 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
         val deValue = dolbyController.getDialogueEnhancerAmount(currentProfile).toString()
         dialoguePref.apply {
             if (entryValues.contains(deValue)) {
+                summary = "%s"
                 value = deValue
-                summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
             } else {
-                summaryProvider = null
                 summary = unknownRes
                 dlog(TAG, "dialogue enhancer value $deValue unknown")
             }
@@ -259,7 +256,6 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
 
         // below prefs are not enabled on loudspeaker
         if (isOnSpeaker) {
-            stereoPref?.summaryProvider = null
             stereoPref?.summary = headphoneRes
             hpVirtPref.summary = headphoneRes
             return
@@ -268,10 +264,9 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
         val swValue = dolbyController.getStereoWideningAmount(currentProfile).toString()
         stereoPref?.apply {
             if (entryValues.contains(swValue)) {
+                summary = "%s"
                 value = swValue
-                summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
             } else {
-                summaryProvider = null
                 summary = unknownRes
                 dlog(TAG, "stereo widening value $swValue unknown")
             }
