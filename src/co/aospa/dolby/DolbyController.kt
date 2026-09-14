@@ -27,7 +27,7 @@ internal class DolbyController private constructor(private val context: Context)
     private val volumeLevelerSupported =
         context.getResources().getBoolean(R.bool.dolby_volume_leveler_supported)
 
-    // Restore current profile on every media session
+    // Restore current profile and its settings on every media session
     private val playbackCallback =
         object : AudioPlaybackCallback() {
             override fun onPlaybackConfigChanged(configs: List<AudioPlaybackConfiguration>) {
@@ -36,21 +36,21 @@ internal class DolbyController private constructor(private val context: Context)
                         it.playerState == AudioPlaybackConfiguration.PLAYER_STATE_STARTED
                     }
                 dlog(TAG, "onPlaybackConfigChanged: isPlaying=$isPlaying")
-                if (isPlaying) setCurrentProfile()
+                if (isPlaying) restoreCurrentProfile()
             }
         }
 
-    // Restore current profile on audio device change
+    // Restore current profile and its settings on audio device change
     private val audioDeviceCallback =
         object : AudioDeviceCallback() {
             override fun onAudioDevicesAdded(addedDevices: Array<AudioDeviceInfo>) {
                 dlog(TAG, "onAudioDevicesAdded")
-                setCurrentProfile()
+                restoreCurrentProfile()
             }
 
             override fun onAudioDevicesRemoved(removedDevices: Array<AudioDeviceInfo>) {
                 dlog(TAG, "onAudioDevicesRemoved")
-                setCurrentProfile()
+                restoreCurrentProfile()
             }
         }
 
@@ -75,7 +75,7 @@ internal class DolbyController private constructor(private val context: Context)
             checkEffect()
             dolbyEffect.dsOn = value
             registerCallbacks = value
-            if (value) setCurrentProfile()
+            if (value) restoreCurrentProfile()
         }
 
     var profile: Int
@@ -108,7 +108,7 @@ internal class DolbyController private constructor(private val context: Context)
             }
 
         // Finally restore the current profile.
-        setCurrentProfile()
+        restoreCurrentProfile()
     }
 
     private fun restoreSettings(profile: Int) {
@@ -129,19 +129,13 @@ internal class DolbyController private constructor(private val context: Context)
         )
         setStereoWideningAmount(
             prefs
-                .getString(
-                    DolbyConstants.PREF_STEREO,
-                    DolbyConstants.STEREO_WIDENING_DEFAULT,
-                )!!
+                .getString(DolbyConstants.PREF_STEREO, DolbyConstants.STEREO_WIDENING_DEFAULT)!!
                 .toInt(),
             profile,
         )
         setDialogueEnhancerAmount(
             prefs
-                .getString(
-                    DolbyConstants.PREF_DIALOGUE,
-                    DolbyConstants.DIALOGUE_ENHANCER_DEFAULT,
-                )!!
+                .getString(DolbyConstants.PREF_DIALOGUE, DolbyConstants.DIALOGUE_ENHANCER_DEFAULT)!!
                 .toInt(),
             profile,
         )
@@ -165,11 +159,18 @@ internal class DolbyController private constructor(private val context: Context)
         }
     }
 
-    private fun setCurrentProfile() {
-        dlog(TAG, "setCurrentProfile")
-        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
-        profile = prefs.getString(DolbyConstants.PREF_PROFILE, "0" /*dynamic*/)!!.toInt()
+    fun restoreCurrentProfile(): Int {
+        dlog(TAG, "restoreCurrentProfile")
+        val currentProfile = getPersistedProfile()
+        profile = currentProfile
+        restoreSettings(currentProfile)
+        return currentProfile
     }
+
+    fun getPersistedProfile(): Int =
+        PreferenceManager.getDefaultSharedPreferences(context)
+            .getString(DolbyConstants.PREF_PROFILE, "0" /* dynamic */)
+            ?.toIntOrNull() ?: 0
 
     fun setDsOnAndPersist(dsOn: Boolean) {
         this.dsOn = dsOn
@@ -180,10 +181,12 @@ internal class DolbyController private constructor(private val context: Context)
     }
 
     fun getProfileName(): String? {
-        val profile = dolbyEffect.profile.toString()
         val profiles = context.resources.getStringArray(R.array.dolby_profile_values)
-        val profileIndex = profiles.indexOf(profile)
-        dlog(TAG, "getProfileName: profile=$profile index=$profileIndex")
+        val effectProfile = dolbyEffect.profile
+        val profileIndex =
+            profiles.indexOf(getPersistedProfile().toString()).takeIf { it >= 0 }
+                ?: profiles.indexOf(effectProfile.toString())
+        dlog(TAG, "getProfileName: effectProfile=$effectProfile index=$profileIndex")
         return if (profileIndex == -1) null
         else context.resources.getStringArray(R.array.dolby_profile_entries)[profileIndex]
     }

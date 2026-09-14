@@ -100,7 +100,7 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
             volumePref = null
         }
 
-        val profile = dolbyController.profile
+        val profile = dolbyController.restoreCurrentProfile()
         preferenceManager.preferenceDataStore =
             DolbyPreferenceStore(requireContext()).also { it.profile = profile }
 
@@ -142,6 +142,8 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
 
     override fun onResume() {
         super.onResume()
+        (preferenceManager.preferenceDataStore as DolbyPreferenceStore).profile =
+            dolbyController.restoreCurrentProfile()
         updateProfileSpecificPrefs()
     }
 
@@ -158,7 +160,7 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
                 val profile = newValue.toString().toInt()
                 dolbyController.profile = profile
                 (preferenceManager.preferenceDataStore as DolbyPreferenceStore).profile = profile
-                updateProfileSpecificPrefs()
+                updateProfileSpecificPrefs(profile)
             }
 
             PREF_SPK_VIRTUALIZER -> {
@@ -199,11 +201,13 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
         isOnSpeaker = (device.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER)
     }
 
-    private fun updateProfileSpecificPrefs() {
+    private fun updateProfileSpecificPrefs(profileOverride: Int? = null) {
         val unknownRes = getString(R.string.dolby_unknown)
         val headphoneRes = getString(R.string.dolby_connect_headphones)
         val dsOn = dolbyController.dsOn
-        val currentProfile = dolbyController.profile
+        // The persisted value is the source of truth for the selector. The effect can
+        // temporarily report an invalid profile while an audio route is being restored.
+        val currentProfile = profileOverride ?: dolbyController.getPersistedProfile()
 
         dlog(
             TAG,
@@ -213,10 +217,11 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
 
         profilePref.setEnabled(dsOn)
         profilePref.apply {
-            if (entryValues.contains(currentProfile.toString())) {
-                summary = "%s"
+            if (findIndexOfValue(currentProfile.toString()) >= 0) {
                 value = currentProfile.toString()
+                summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
             } else {
+                summaryProvider = null
                 summary = unknownRes
                 dlog(TAG, "current profile $currentProfile unknown")
             }
@@ -239,29 +244,29 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
 
         val ieqValue = dolbyController.getIeqPreset(currentProfile)
         ieqPref.apply {
-            if (entryValues.contains(ieqValue.toString())) {
-                summary = "%s"
+            if (findIndexOfValue(ieqValue.toString()) >= 0) {
                 value = ieqValue.toString()
+                summaryProvider = Preference.SummaryProvider<DolbyIeqPreference> { it.entry }
             } else {
                 dlog(TAG, "ieq value $ieqValue unknown, resetting to default")
                 dolbyController.setIeqPreset(IEQ_PRESET_DEFAULT.toInt(), currentProfile)
-                summary = "%s"
+                summaryProvider = Preference.SummaryProvider<DolbyIeqPreference> { it.entry }
                 value = IEQ_PRESET_DEFAULT
             }
         }
 
         val deValue = dolbyController.getDialogueEnhancerAmount(currentProfile).toString()
         dialoguePref.apply {
-            if (entryValues.contains(deValue)) {
-                summary = "%s"
+            if (findIndexOfValue(deValue) >= 0) {
                 value = deValue
+                summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
             } else {
                 dlog(TAG, "dialogue enhancer value $deValue unknown, resetting to default")
                 dolbyController.setDialogueEnhancerAmount(
                     DIALOGUE_ENHANCER_DEFAULT.toInt(),
                     currentProfile,
                 )
-                summary = "%s"
+                summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
                 value = DIALOGUE_ENHANCER_DEFAULT
             }
         }
@@ -272,6 +277,7 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
 
         // below prefs are not enabled on loudspeaker
         if (isOnSpeaker) {
+            stereoPref?.summaryProvider = null
             stereoPref?.summary = headphoneRes
             hpVirtPref.summary = headphoneRes
             return
@@ -279,17 +285,17 @@ class DolbySettingsFragment : SettingsBasePreferenceFragment(), OnPreferenceChan
 
         val swValue = dolbyController.getStereoWideningAmount(currentProfile).toString()
         stereoPref?.apply {
-            if (entryValues.contains(swValue)) {
-                summary = "%s"
+            if (findIndexOfValue(swValue) >= 0) {
                 value = swValue
+                summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
             } else {
-                dlog(TAG, "stereo widening value $swValue unknown, resetting to default")
-                dolbyController.setStereoWideningAmount(
-                    STEREO_WIDENING_DEFAULT.toInt(),
-                    currentProfile,
-                )
-                summary = "%s"
-                value = STEREO_WIDENING_DEFAULT
+                val persistedValue =
+                    preferenceManager.preferenceDataStore
+                        ?.getString(PREF_STEREO, STEREO_WIDENING_DEFAULT)
+                        ?.takeIf { findIndexOfValue(it) >= 0 } ?: STEREO_WIDENING_DEFAULT
+                dlog(TAG, "stereo widening value $swValue unknown, using persisted $persistedValue")
+                value = persistedValue
+                summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
             }
         }
 
